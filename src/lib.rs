@@ -27,7 +27,7 @@ impl fmt::Debug for Node {
 }
 
 impl Node {
-    fn insert(mut self, input: &[u8], value: u64) -> (Self, Option<u64>) {
+    fn insert(self, input: &[u8], value: u64) -> (Self, Option<u64>) {
         let Node {
             mut nb_childrens,
             mut path,
@@ -58,13 +58,20 @@ impl Node {
                     let new_path = &input[common_path.len()..];
 
                     let mut node4 = Node4::default();
-                    node4.keys[0] = Some(original_node_path[0]);
+                    if !original_node_path.is_empty() {
+                        node4.keys[0] = EOption::Some(original_node_path[0]);
+                    } else {
+                        node4.keys[0] = EOption::End;
+                    }
                     node4.values[0] =
                         Some(Box::new(Node::default().insert(original_node_path, v).0));
 
-                    node4.keys[1] = Some(new_path[0]);
+                    if !new_path.is_empty() {
+                        node4.keys[1] = EOption::Some(new_path[0]);
+                    } else {
+                        node4.keys[1] = EOption::End;
+                    }
                     node4.values[1] = Some(Box::new(Node::default().insert(new_path, value).0));
-
                     // patch ourselves
                     path = common_path;
                     inner = InnerNode::Node4(node4);
@@ -110,6 +117,20 @@ pub enum InnerNode {
     Node256(Node256),
 }
 
+#[derive(Default, Debug, PartialEq)]
+pub enum EOption<T> {
+    End,
+    #[default]
+    None,
+    Some(T),
+}
+
+impl<T> EOption<T> {
+    pub fn is_none(&self) -> bool {
+        matches!(self, EOption::None)
+    }
+}
+
 /*
 Node4: The smallest node type can store up to 4 child
 pointers and uses an array of length 4 for keys and another
@@ -118,14 +139,14 @@ are stored at corresponding positions and the keys are sorted.
 */
 #[derive(Default)]
 pub struct Node4 {
-    keys: [Option<u8>; 4],
+    keys: [EOption<u8>; 4],
     values: [Option<Box<Node>>; 4],
 }
 
 impl Node4 {
     fn insert(mut self, input: &[u8], value: u64) -> (InnerNode, Option<u64>) {
         let byte = input[0];
-        let pos = self.keys.iter().position(|opt| *opt == Some(byte));
+        let pos = self.keys.iter().position(|opt| *opt == EOption::Some(byte));
 
         if let Some(pos) = pos {
             // safe because we found the position above
@@ -137,7 +158,7 @@ impl Node4 {
             */
             todo!()
             // (InnerNode::Node4(self), inserted)
-        } else if let Some(pos) = self.keys.iter().position(|opt| opt.is_none()) {
+        } else if let Some(pos) = self.keys.iter().position(EOption::is_none) {
             // create a leaf
             todo!()
         } else {
@@ -153,8 +174,9 @@ impl fmt::Debug for Node4 {
             .keys
             .iter()
             .map(|key| match key {
-                Some(k) => format!("`{}`", *k as char),
-                None => format!("___"),
+                EOption::Some(k) => format!("`{}`", *k as char),
+                EOption::None => format!("___"),
+                EOption::End => format!("END"),
             })
             .collect::<Vec<String>>();
         f.debug_struct("Node")
@@ -365,8 +387,8 @@ mod test {
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
                     Node {
-                        keys: "[\"`o`\", \"`a`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), None, None]",
+                        keys: "[\"`o`\", \"END\", \"___\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(43) }), None, None]",
                     },
                 ),
             },
