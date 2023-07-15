@@ -27,62 +27,65 @@ impl fmt::Debug for Node {
 }
 
 impl Node {
-    fn insert(self, input: &[u8], value: u64) -> (Self, Option<u64>) {
-        let Node {
-            mut nb_childrens,
-            mut path,
-            mut inner,
-        } = self;
-
-        let old_value = match inner {
+    fn insert(mut self, input: &[u8], value: u64) -> (Self, Option<u64>) {
+        let old_value = match self.inner {
             InnerNode::Empty => {
-                path = input.to_vec();
-                inner = InnerNode::SingleValueLeaf(value);
+                self.path = input.to_vec();
+                self.inner = InnerNode::SingleValueLeaf(value);
                 None
             }
 
             InnerNode::SingleValueLeaf(v) => {
                 // is it the same value?
-                if input == path {
-                    inner = InnerNode::SingleValueLeaf(value);
+                if input == self.path {
+                    self.inner = InnerNode::SingleValueLeaf(value);
                     Some(v)
                 } else {
                     let common_path: Vec<u8> = input
                         .iter()
-                        .zip(&path)
+                        .zip(&self.path)
                         .take_while(|(a, b)| a == b)
                         .map(|(a, _b)| *a)
                         .collect();
 
-                    let original_node_path = &path[common_path.len()..];
+                    let original_node_path = &self.path[common_path.len()..];
                     let new_path = &input[common_path.len()..];
 
                     let mut node4 = Node4::default();
+                    let is_original_before_new = original_node_path > new_path;
+                    let original_node_pos = is_original_before_new as usize;
+                    let new_node_pos = !is_original_before_new as usize;
                     if !original_node_path.is_empty() {
-                        node4.keys[0] = EOption::Some(original_node_path[0]);
+                        node4.keys[original_node_pos] = EOption::Some(original_node_path[0]);
                     } else {
-                        node4.keys[0] = EOption::End;
+                        node4.keys[original_node_pos] = EOption::End;
                     }
-                    node4.values[0] =
+                    node4.values[original_node_pos] =
                         Some(Box::new(Node::default().insert(original_node_path, v).0));
 
                     if !new_path.is_empty() {
-                        node4.keys[1] = EOption::Some(new_path[0]);
+                        node4.keys[new_node_pos] = EOption::Some(new_path[0]);
                     } else {
-                        node4.keys[1] = EOption::End;
+                        node4.keys[new_node_pos] = EOption::End;
                     }
-                    node4.values[1] = Some(Box::new(Node::default().insert(new_path, value).0));
+                    node4.values[new_node_pos] =
+                        Some(Box::new(Node::default().insert(new_path, value).0));
                     // patch ourselves
-                    path = common_path;
-                    inner = InnerNode::Node4(node4);
+                    self.path = common_path;
+                    self.inner = InnerNode::Node4(node4);
                     None
                 }
                 // (InnerNode::Node4(value), None)
             }
 
             InnerNode::Node4(node) => {
+                // match input.strip_prefix(&self.path) {
+                //     Some([]) => ,
+                //     None => todo!(),
+                // }
+
                 let (node, old_value) = node.insert(input, value);
-                inner = node;
+                self.inner = node;
                 old_value
             }
             // InnerNode::Node16(node) => node.insert(input),
@@ -90,17 +93,10 @@ impl Node {
             // InnerNode::Node256(node) => node.insert(input),
             _ => todo!(),
         };
-        nb_childrens = self
+        self.nb_childrens = self
             .nb_childrens
             .saturating_add(u64::from(old_value.is_none()));
-        (
-            Node {
-                nb_childrens,
-                path,
-                inner,
-            },
-            old_value,
-        )
+        (self, old_value)
     }
 }
 
@@ -364,8 +360,8 @@ mod test {
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
                     Node {
-                        keys: "[\"`o`\", \"`a`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), None, None]",
+                        keys: "[\"`a`\", \"`o`\", \"___\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
                     },
                 ),
             },
@@ -387,8 +383,8 @@ mod test {
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
                     Node {
-                        keys: "[\"`o`\", \"END\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(43) }), None, None]",
+                        keys: "[\"END\", \"`o`\", \"___\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
                     },
                 ),
             },
