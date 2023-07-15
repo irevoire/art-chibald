@@ -152,7 +152,43 @@ impl Node {
                         None
                     }
                 }
-                None => None,
+                None => {
+                    let common_path: Vec<u8> = input
+                        .iter()
+                        .zip(&self.path)
+                        .take_while(|(a, b)| a == b)
+                        .map(|(a, _b)| *a)
+                        .collect();
+
+                    let original_node_path = &self.path[common_path.len()..];
+                    let new_path = &input[common_path.len()..];
+
+                    let mut node4 = Node4::default();
+                    let is_original_before_new = original_node_path > new_path;
+                    let original_node_pos = is_original_before_new as usize;
+                    let new_node_pos = !is_original_before_new as usize;
+                    if !original_node_path.is_empty() {
+                        node4.keys[original_node_pos] = EOption::Some(original_node_path[0]);
+                    } else {
+                        node4.keys[original_node_pos] = EOption::End;
+                    }
+                    self.path = original_node_path.to_vec();
+                    node4.values[original_node_pos] = Some(Box::new(self));
+
+                    if !new_path.is_empty() {
+                        node4.keys[new_node_pos] = EOption::Some(new_path[0]);
+                    } else {
+                        node4.keys[new_node_pos] = EOption::End;
+                    }
+                    node4.values[new_node_pos] =
+                        Some(Box::new(Node::default().insert(new_path, value).0));
+                    // patch ourselves
+                    self = Default::default();
+                    self.path = common_path;
+                    self.inner = InnerNode::Node4(node4);
+
+                    None
+                }
             },
             // InnerNode::Node16(node) => node.insert(input),
             // InnerNode::Node48(node) => node.insert(input),
@@ -728,6 +764,30 @@ mod test {
                     Node {
                         keys: "[\"`a`\", \"`i`\", \"`o`\", \"___\"]",
                         values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None]",
+                    },
+                ),
+            },
+        }
+        "###);
+    }
+
+    #[test]
+    fn insert_several_values_with_mismatched_prefix() {
+        let mut art = Art::new();
+        art.insert(b"hello", 42);
+        art.insert(b"hella", 43);
+        let ret = art.insert(b"hey", 44);
+        insta::assert_debug_snapshot!(ret, @"None");
+
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 1,
+                path: "`he` ([104, 101])",
+                inner: Node4(
+                    Node {
+                        keys: "[\"`l`\", \"`y`\", \"___\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 2, path: \"`ll` ([108, 108])\", inner: Node4(Node { keys: \"[\\\"`a`\\\", \\\"`o`\\\", \\\"___\\\", \\\"___\\\"]\", values: \"[Some(Node { nb_childrens: 1, path: \\\"`a` ([97])\\\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \\\"`o` ([111])\\\", inner: SingleValueLeaf(42) }), None, None]\" }) }), Some(Node { nb_childrens: 1, path: \"`y` ([121])\", inner: SingleValueLeaf(44) }), None, None]",
                     },
                 ),
             },
