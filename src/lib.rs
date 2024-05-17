@@ -3,15 +3,15 @@ use std::{
     mem::take,
 };
 
-use node16::Node16;
 use node256::Node256;
-use node4::Node4;
 use node48::Node48;
+use static_node::{Node16, Node4};
 
-mod node16;
+// mod node16;
 mod node256;
-mod node4;
+// mod node4;
 mod node48;
+mod static_node;
 
 /*
 Additionally, at the front of each inner node, a header of
@@ -181,7 +181,7 @@ impl Node {
                     None
                 }
             },
-            // InnerNode::Node16(node) => node.insert(input),
+            // InnerNode::Node16(node) => ,
             // InnerNode::Node48(node) => node.insert(input),
             // InnerNode::Node256(node) => node.insert(input),
             _ => todo!(),
@@ -217,7 +217,7 @@ impl InnerNode {
     }
 }
 
-#[derive(Default, PartialEq, Debug)]
+#[derive(Default, PartialEq)]
 pub enum Cell {
     End,
     #[default]
@@ -231,7 +231,7 @@ impl Cell {
     }
 }
 
-impl std::fmt::Display for Cell {
+impl std::fmt::Debug for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Cell::Some(k) => write!(f, "`{}`", *k as char),
@@ -332,9 +332,35 @@ mod test {
                 nb_childrens: 2,
                 path: "`` ([])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`h`\", \"`w`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`hello` ([104, 101, 108, 108, 111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`world` ([119, 111, 114, 108, 100])\", inner: SingleValueLeaf(43) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            `h`,
+                            `w`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`hello` ([104, 101, 108, 108, 111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`world` ([119, 111, 114, 108, 100])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
@@ -355,9 +381,35 @@ mod test {
                 nb_childrens: 2,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`a`\", \"`o`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            `a`,
+                            `o`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
@@ -378,9 +430,35 @@ mod test {
                 nb_childrens: 2,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"END\", \"`o`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            END,
+                            `o`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`` ([])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
@@ -406,9 +484,35 @@ mod test {
                 nb_childrens: 2,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"END\", \"`o`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            END,
+                            `o`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`` ([])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
@@ -430,9 +534,43 @@ mod test {
                 nb_childrens: 3,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"END\", \"`a`\", \"`o`\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`` ([])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None]",
+                    StaticNode {
+                        keys: [
+                            END,
+                            `a`,
+                            `o`,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`` ([])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                        ],
                     },
                 ),
             },
@@ -456,32 +594,24 @@ mod test {
                 nb_childrens: 5,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node16(
-                    Node16 {
+                    StaticNode {
                         keys: [
-                            End,
-                            Some(
-                                97,
-                            ),
-                            Some(
-                                105,
-                            ),
-                            Some(
-                                111,
-                            ),
-                            Some(
-                                117,
-                            ),
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
+                            END,
+                            `a`,
+                            `i`,
+                            `o`,
+                            `u`,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
                         ],
                         values: [
                             Some(
@@ -579,9 +709,35 @@ mod test {
                 nb_childrens: 2,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`a`\", \"`o`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            `a`,
+                            `o`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
@@ -594,9 +750,43 @@ mod test {
                 nb_childrens: 3,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`a`\", \"`i`\", \"`o`\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None]",
+                    StaticNode {
+                        keys: [
+                            `a`,
+                            `i`,
+                            `o`,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`i` ([105])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                        ],
                     },
                 ),
             },
@@ -609,9 +799,51 @@ mod test {
                 nb_childrens: 4,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`a`\", \"`i`\", \"`o`\", \"`u`\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`u` ([117])\", inner: SingleValueLeaf(45) })]",
+                    StaticNode {
+                        keys: [
+                            `a`,
+                            `i`,
+                            `o`,
+                            `u`,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`i` ([105])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`u` ([117])",
+                                    inner: SingleValueLeaf(
+                                        45,
+                                    ),
+                                },
+                            ),
+                        ],
                     },
                 ),
             },
@@ -635,34 +867,24 @@ mod test {
                 nb_childrens: 5,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node16(
-                    Node16 {
+                    StaticNode {
                         keys: [
-                            Some(
-                                97,
-                            ),
-                            Some(
-                                105,
-                            ),
-                            Some(
-                                111,
-                            ),
-                            Some(
-                                117,
-                            ),
-                            Some(
-                                121,
-                            ),
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
-                            None,
+                            `a`,
+                            `i`,
+                            `o`,
+                            `u`,
+                            `y`,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
+                            ___,
                         ],
                         values: [
                             Some(
@@ -743,9 +965,43 @@ mod test {
                 nb_childrens: 3,
                 path: "`hell` ([104, 101, 108, 108])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`a`\", \"`i`\", \"`o`\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None]",
+                    StaticNode {
+                        keys: [
+                            `a`,
+                            `i`,
+                            `o`,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`a` ([97])",
+                                    inner: SingleValueLeaf(
+                                        43,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`i` ([105])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`o` ([111])",
+                                    inner: SingleValueLeaf(
+                                        42,
+                                    ),
+                                },
+                            ),
+                            None,
+                        ],
                     },
                 ),
             },
@@ -767,9 +1023,64 @@ mod test {
                 nb_childrens: 1,
                 path: "`he` ([104, 101])",
                 inner: Node4(
-                    Node {
-                        keys: "[\"`l`\", \"`y`\", \"___\", \"___\"]",
-                        values: "[Some(Node { nb_childrens: 2, path: \"`ll` ([108, 108])\", inner: Node4(Node { keys: \"[\\\"`a`\\\", \\\"`o`\\\", \\\"___\\\", \\\"___\\\"]\", values: \"[Some(Node { nb_childrens: 1, path: \\\"`a` ([97])\\\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \\\"`o` ([111])\\\", inner: SingleValueLeaf(42) }), None, None]\" }) }), Some(Node { nb_childrens: 1, path: \"`y` ([121])\", inner: SingleValueLeaf(44) }), None, None]",
+                    StaticNode {
+                        keys: [
+                            `l`,
+                            `y`,
+                            ___,
+                            ___,
+                        ],
+                        values: [
+                            Some(
+                                Node {
+                                    nb_childrens: 2,
+                                    path: "`ll` ([108, 108])",
+                                    inner: Node4(
+                                        StaticNode {
+                                            keys: [
+                                                `a`,
+                                                `o`,
+                                                ___,
+                                                ___,
+                                            ],
+                                            values: [
+                                                Some(
+                                                    Node {
+                                                        nb_childrens: 1,
+                                                        path: "`a` ([97])",
+                                                        inner: SingleValueLeaf(
+                                                            43,
+                                                        ),
+                                                    },
+                                                ),
+                                                Some(
+                                                    Node {
+                                                        nb_childrens: 1,
+                                                        path: "`o` ([111])",
+                                                        inner: SingleValueLeaf(
+                                                            42,
+                                                        ),
+                                                    },
+                                                ),
+                                                None,
+                                                None,
+                                            ],
+                                        },
+                                    ),
+                                },
+                            ),
+                            Some(
+                                Node {
+                                    nb_childrens: 1,
+                                    path: "`y` ([121])",
+                                    inner: SingleValueLeaf(
+                                        44,
+                                    ),
+                                },
+                            ),
+                            None,
+                            None,
+                        ],
                     },
                 ),
             },
