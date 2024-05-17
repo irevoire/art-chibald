@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 
 [dev-dependencies]
-insta = "1.30.0"
+insta = "1.39.0"
