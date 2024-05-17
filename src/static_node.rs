@@ -3,7 +3,7 @@
 //! array of the same length for pointers. The keys and pointers
 //! are stored at corresponding positions and the keys are sorted.
 
-use crate::{Cell, Node};
+use crate::{node48::Node48, Cell, Node};
 
 #[derive(Debug)]
 pub(crate) struct StaticNode<const SIZE: usize> {
@@ -44,10 +44,19 @@ impl<const SIZE: usize> StaticNode<SIZE> {
     }
 }
 
-impl StaticNode<4> {
+impl Node4 {
     pub fn promote(self, start: usize, path: &[u8], cell: Cell, value: u64) -> Node16 {
         let mut new_node = Node16::from(self);
         new_node.insert(start, path, cell, value);
         new_node
+    }
+}
+
+impl Node16 {
+    pub fn promote(self, start: usize, path: &[u8], cell: Cell, value: u64) -> Node48 {
+        // let mut new_node = Node48::from(self);
+        // new_node.insert(start, path, cell, value);
+        // new_node
+        todo!()
     }
 }

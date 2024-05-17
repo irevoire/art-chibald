@@ -8,10 +8,29 @@
 //! comparison to 256 pointers of 8 bytes, because the indexes
 //! only require 6 bits (we use 1 byte for simplicity).
 
-use crate::Node;
+use crate::{static_node::Node16, Node};
 
 #[derive(Debug)]
 pub struct Node48 {
     keys: [Option<u8>; 256],
     values: [Option<Box<Node>>; 48],
+}
+
+impl From<Node16> for Node48 {
+    fn from(value: Node16) -> Self {
+        let mut keys: [Option<u8>; 256] = std::array::from_fn(|_| None);
+        let mut values: [Option<Box<Node>>; 48] = std::array::from_fn(|_| None);
+
+        value
+            .keys
+            .into_iter()
+            .zip(value.values)
+            .enumerate()
+            .for_each(|(i, (key, value))| {
+                keys[key.unwrap()] = Some(i as u8);
+                values[i] = value;
+            });
+
+        Self { keys, values }
+    }
 }

@@ -181,7 +181,96 @@ impl Node {
                     None
                 }
             },
-            // InnerNode::Node16(node) => ,
+            InnerNode::Node16(ref mut node) => match input.strip_prefix(self.path.as_slice()) {
+                Some([]) => {
+                    if node.keys[0] == Cell::End {
+                        let mut value_node = node.values[0].take().unwrap();
+                        let value_node_v = value_node.inner.unwrap_leaf();
+                        let old_value = *value_node_v;
+                        *value_node_v = value;
+                        node.values[0] = Some(value_node);
+                        Some(old_value)
+                    } else {
+                        if self.nb_childrens == 4 {
+                            let new_node = take(node).promote(0, &[], Cell::End, value);
+                            self.inner = InnerNode::Node48(new_node);
+                        } else {
+                            node.insert(0, &[], Cell::End, value);
+                        }
+                        None
+                    }
+                }
+                Some(s) => {
+                    if let Some(pos) = node
+                        .keys
+                        .iter()
+                        .position(|k| matches!(k, Cell::Some(b) if *b == s[0]))
+                    {
+                        let (new_node, old_value) =
+                            node.values[pos].take().unwrap().insert(s, value);
+                        node.values[pos] = Some(Box::new(new_node));
+                        old_value
+                    } else {
+                        if self.nb_childrens == 4 {
+                            let pos = node
+                                .keys
+                                .iter()
+                                .position(|k| matches!(k, Cell::Some(b) if *b > s[0]))
+                                .unwrap_or(4);
+
+                            let new_node = take(node).promote(pos, s, Cell::Some(s[0]), value);
+                            self.inner = InnerNode::Node48(new_node);
+                        } else {
+                            let pos = node
+                                .keys
+                                .iter()
+                                .position(|k| {
+                                    *k == Cell::None || matches!(k, Cell::Some(b) if *b > s[0])
+                                })
+                                .unwrap();
+                            node.insert(pos, s, Cell::Some(s[0]), value);
+                        }
+                        None
+                    }
+                }
+                None => {
+                    let common_path: Vec<u8> = input
+                        .iter()
+                        .zip(&self.path)
+                        .take_while(|(a, b)| a == b)
+                        .map(|(a, _b)| *a)
+                        .collect();
+
+                    let original_node_path = &self.path[common_path.len()..];
+                    let new_path = &input[common_path.len()..];
+
+                    let mut node4 = Node4::default();
+                    let is_original_before_new = original_node_path > new_path;
+                    let original_node_pos = is_original_before_new as usize;
+                    let new_node_pos = !is_original_before_new as usize;
+                    if !original_node_path.is_empty() {
+                        node4.keys[original_node_pos] = Cell::Some(original_node_path[0]);
+                    } else {
+                        node4.keys[original_node_pos] = Cell::End;
+                    }
+                    self.path = original_node_path.to_vec();
+                    node4.values[original_node_pos] = Some(Box::new(take(&mut self)));
+
+                    if !new_path.is_empty() {
+                        node4.keys[new_node_pos] = Cell::Some(new_path[0]);
+                    } else {
+                        node4.keys[new_node_pos] = Cell::End;
+                    }
+                    node4.values[new_node_pos] =
+                        Some(Box::new(Node::default().insert(new_path, value).0));
+                    // patch ourselves
+                    self = Default::default();
+                    self.path = common_path;
+                    self.inner = InnerNode::Node4(node4);
+
+                    None
+                }
+            },
             // InnerNode::Node48(node) => node.insert(input),
             // InnerNode::Node256(node) => node.insert(input),
             _ => todo!(),
@@ -228,6 +317,13 @@ pub enum Cell {
 impl Cell {
     pub fn is_none(&self) -> bool {
         matches!(self, Cell::None)
+    }
+
+    pub fn unwrap(self) -> usize {
+        match self {
+            Cell::End | Cell::None => unreachable!("Called `.unwrap()` on {self:?}"),
+            Cell::Some(i) => i as usize,
+        }
     }
 }
 
