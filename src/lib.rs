@@ -1,7 +1,17 @@
 use std::{
-    fmt,
-    mem::{swap, take},
+    fmt::{self},
+    mem::take,
 };
+
+use node16::Node16;
+use node256::Node256;
+use node4::Node4;
+use node48::Node48;
+
+mod node16;
+mod node256;
+mod node4;
+mod node48;
 
 /*
 Additionally, at the front of each inner node, a header of
@@ -59,17 +69,17 @@ impl Node {
                     let original_node_pos = is_original_before_new as usize;
                     let new_node_pos = !is_original_before_new as usize;
                     if !original_node_path.is_empty() {
-                        node4.keys[original_node_pos] = EOption::Some(original_node_path[0]);
+                        node4.keys[original_node_pos] = Cell::Some(original_node_path[0]);
                     } else {
-                        node4.keys[original_node_pos] = EOption::End;
+                        node4.keys[original_node_pos] = Cell::End;
                     }
                     node4.values[original_node_pos] =
                         Some(Box::new(Node::default().insert(original_node_path, v).0));
 
                     if !new_path.is_empty() {
-                        node4.keys[new_node_pos] = EOption::Some(new_path[0]);
+                        node4.keys[new_node_pos] = Cell::Some(new_path[0]);
                     } else {
-                        node4.keys[new_node_pos] = EOption::End;
+                        node4.keys[new_node_pos] = Cell::End;
                     }
                     node4.values[new_node_pos] =
                         Some(Box::new(Node::default().insert(new_path, value).0));
@@ -83,7 +93,7 @@ impl Node {
 
             InnerNode::Node4(ref mut node) => match input.strip_prefix(self.path.as_slice()) {
                 Some([]) => {
-                    if node.keys[0] == EOption::End {
+                    if node.keys[0] == Cell::End {
                         let mut value_node = node.values[0].take().unwrap();
                         let value_node_v = value_node.inner.unwrap_leaf();
                         let old_value = *value_node_v;
@@ -92,18 +102,10 @@ impl Node {
                         Some(old_value)
                     } else {
                         if self.nb_childrens == 4 {
-                            let mut new_node = Node16::from(take(node));
-                            new_node.keys.rotate_right(1);
-                            new_node.keys[0] = EOption::End;
-                            new_node.values.rotate_right(1);
-                            new_node.values[0] =
-                                Some(Box::new(Node::default().insert(&[], value).0));
+                            let new_node = take(node).promote(0, &[], Cell::End, value);
                             self.inner = InnerNode::Node16(new_node);
                         } else {
-                            node.keys.rotate_right(1);
-                            node.keys[0] = EOption::End;
-                            node.values.rotate_right(1);
-                            node.values[0] = Some(Box::new(Node::default().insert(&[], value).0));
+                            node.insert(0, &[], Cell::End, value);
                         }
                         None
                     }
@@ -112,7 +114,7 @@ impl Node {
                     if let Some(pos) = node
                         .keys
                         .iter()
-                        .position(|k| matches!(k, EOption::Some(b) if *b == s[0]))
+                        .position(|k| matches!(k, Cell::Some(b) if *b == s[0]))
                     {
                         let (new_node, old_value) =
                             node.values[pos].take().unwrap().insert(s, value);
@@ -120,34 +122,23 @@ impl Node {
                         old_value
                     } else {
                         if self.nb_childrens == 4 {
-                            let mut new_node = Node16::from(take(node));
-                            let pos = new_node
+                            let pos = node
                                 .keys
                                 .iter()
-                                .position(|k| {
-                                    *k == EOption::None
-                                        || matches!(k, EOption::Some(b) if *b > s[0])
-                                })
-                                .unwrap();
-                            new_node.keys[pos..].rotate_right(1);
-                            new_node.keys[pos] = EOption::Some(s[0]);
-                            new_node.values[pos..].rotate_right(1);
-                            new_node.values[pos] =
-                                Some(Box::new(Node::default().insert(s, value).0));
+                                .position(|k| matches!(k, Cell::Some(b) if *b > s[0]))
+                                .unwrap_or(4);
+
+                            let new_node = take(node).promote(pos, s, Cell::Some(s[0]), value);
                             self.inner = InnerNode::Node16(new_node);
                         } else {
                             let pos = node
                                 .keys
                                 .iter()
                                 .position(|k| {
-                                    *k == EOption::None
-                                        || matches!(k, EOption::Some(b) if *b > s[0])
+                                    *k == Cell::None || matches!(k, Cell::Some(b) if *b > s[0])
                                 })
                                 .unwrap();
-                            node.keys[pos..].rotate_right(1);
-                            node.keys[pos] = EOption::Some(s[0]);
-                            node.values[pos..].rotate_right(1);
-                            node.values[pos] = Some(Box::new(Node::default().insert(s, value).0));
+                            node.insert(pos, s, Cell::Some(s[0]), value);
                         }
                         None
                     }
@@ -168,17 +159,17 @@ impl Node {
                     let original_node_pos = is_original_before_new as usize;
                     let new_node_pos = !is_original_before_new as usize;
                     if !original_node_path.is_empty() {
-                        node4.keys[original_node_pos] = EOption::Some(original_node_path[0]);
+                        node4.keys[original_node_pos] = Cell::Some(original_node_path[0]);
                     } else {
-                        node4.keys[original_node_pos] = EOption::End;
+                        node4.keys[original_node_pos] = Cell::End;
                     }
                     self.path = original_node_path.to_vec();
-                    node4.values[original_node_pos] = Some(Box::new(self));
+                    node4.values[original_node_pos] = Some(Box::new(take(&mut self)));
 
                     if !new_path.is_empty() {
-                        node4.keys[new_node_pos] = EOption::Some(new_path[0]);
+                        node4.keys[new_node_pos] = Cell::Some(new_path[0]);
                     } else {
-                        node4.keys[new_node_pos] = EOption::End;
+                        node4.keys[new_node_pos] = Cell::End;
                     }
                     node4.values[new_node_pos] =
                         Some(Box::new(Node::default().insert(new_path, value).0));
@@ -203,7 +194,7 @@ impl Node {
 }
 
 #[derive(Default, Debug)]
-pub enum InnerNode {
+pub(crate) enum InnerNode {
     #[default]
     Empty,
 
@@ -226,107 +217,28 @@ impl InnerNode {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
-pub enum EOption<T> {
+#[derive(Default, PartialEq, Debug)]
+pub enum Cell {
     End,
     #[default]
     None,
-    Some(T),
+    Some(u8),
 }
 
-impl<T> EOption<T> {
+impl Cell {
     pub fn is_none(&self) -> bool {
-        matches!(self, EOption::None)
+        matches!(self, Cell::None)
     }
 }
 
-/*
-Node4: The smallest node type can store up to 4 child
-pointers and uses an array of length 4 for keys and another
-array of the same length for pointers. The keys and pointers
-are stored at corresponding positions and the keys are sorted.
-*/
-#[derive(Default)]
-pub struct Node4 {
-    keys: [EOption<u8>; 4],
-    values: [Option<Box<Node>>; 4],
-}
-
-impl fmt::Debug for Node4 {
+impl std::fmt::Display for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let keys = self
-            .keys
-            .iter()
-            .map(|key| match key {
-                EOption::Some(k) => format!("`{}`", *k as char),
-                EOption::None => "___".to_string(),
-                EOption::End => "END".to_string(),
-            })
-            .collect::<Vec<String>>();
-        f.debug_struct("Node")
-            .field("keys", &format!("{:?}", keys))
-            .field("values", &format!("{:?}", self.values))
-            .finish()
+        match self {
+            Cell::Some(k) => write!(f, "`{}`", *k as char),
+            Cell::None => write!(f, "___"),
+            Cell::End => write!(f, "END"),
+        }
     }
-}
-/*
-Node16: This node type is used for storing between 5 and
-16 child pointers. Like the Node4, the keys and pointers
-are stored in separate arrays at corresponding positions, but
-both arrays have space for 16 entries. A key can be found
-efficiently with binary search or, on modern hardware, with
-parallel comparisons using SIMD instructions.
-*/
-#[derive(Debug)]
-pub struct Node16 {
-    keys: [EOption<u8>; 16],
-    values: [Option<Box<Node>>; 16],
-}
-
-impl From<Node4> for Node16 {
-    fn from(mut value: Node4) -> Self {
-        let mut keys: [EOption<u8>; 16] = Default::default();
-        keys.iter_mut()
-            .zip(value.keys.iter_mut())
-            .for_each(|(l, r)| swap(l, r));
-        let mut values: [Option<Box<Node>>; 16] = Default::default();
-        values
-            .iter_mut()
-            .zip(value.values.iter_mut())
-            .for_each(|(l, r)| swap(l, r));
-        Self { keys, values }
-    }
-}
-
-/*
-Node48: As the number of entries in a node increases,
-searching the key array becomes expensive. Therefore, nodes
-with more than 16 pointers do not store the keys explicitly.
-Instead, a 256-element array is used, which can be indexed
-with key bytes directly. If a node has between 17 and 48 child
-pointers, this array stores indexes into a second array which
-contains up to 48 pointers. This indirection saves space in
-comparison to 256 pointers of 8 bytes, because the indexes
-only require 6 bits (we use 1 byte for simplicity).
-*/
-#[derive(Debug)]
-pub struct Node48 {
-    keys: [Option<u8>; 256],
-    values: [Option<Box<Node>>; 48],
-}
-
-/*
-Node256: The largest node type is simply an array of 256
-pointers and is used for storing between 49 and 256 entries.
-With this representation, the next node can be found very
-efficiently using a single lookup of the key byte in that array.
-No additional indirection is necessary. If most entries are not
-null, this representation is also very space efficient because
-only pointers need to be stored.
-*/
-#[derive(Debug)]
-pub struct Node256 {
-    values: [Option<Box<Node>>; 256],
 }
 
 #[derive(Default, Debug)]
@@ -339,7 +251,6 @@ impl Art {
         Default::default()
     }
 
-    /// Return `true` if the
     pub fn insert(&mut self, input: &[u8], value: u64) -> Option<u64> {
         let this = std::mem::take(&mut self.root);
         let old_value;
@@ -630,6 +541,77 @@ mod test {
                             None,
                             None,
                         ],
+                    },
+                ),
+            },
+        }
+        "###);
+    }
+
+    #[test]
+    fn insert_4_values_with_prefix() {
+        let mut art = Art::new();
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 0,
+                path: "`` ([])",
+                inner: Empty,
+            },
+        }
+        "###);
+        art.insert(b"hello", 42);
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 1,
+                path: "`hello` ([104, 101, 108, 108, 111])",
+                inner: SingleValueLeaf(
+                    42,
+                ),
+            },
+        }
+        "###);
+        art.insert(b"hella", 43);
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 2,
+                path: "`hell` ([104, 101, 108, 108])",
+                inner: Node4(
+                    Node {
+                        keys: "[\"`a`\", \"`o`\", \"___\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None, None]",
+                    },
+                ),
+            },
+        }
+        "###);
+        art.insert(b"helli", 44);
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 3,
+                path: "`hell` ([104, 101, 108, 108])",
+                inner: Node4(
+                    Node {
+                        keys: "[\"`a`\", \"`i`\", \"`o`\", \"___\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), None]",
+                    },
+                ),
+            },
+        }
+        "###);
+        art.insert(b"hellu", 45);
+        insta::assert_debug_snapshot!(art, @r###"
+        Art {
+            root: Node {
+                nb_childrens: 4,
+                path: "`hell` ([104, 101, 108, 108])",
+                inner: Node4(
+                    Node {
+                        keys: "[\"`a`\", \"`i`\", \"`o`\", \"`u`\"]",
+                        values: "[Some(Node { nb_childrens: 1, path: \"`a` ([97])\", inner: SingleValueLeaf(43) }), Some(Node { nb_childrens: 1, path: \"`i` ([105])\", inner: SingleValueLeaf(44) }), Some(Node { nb_childrens: 1, path: \"`o` ([111])\", inner: SingleValueLeaf(42) }), Some(Node { nb_childrens: 1, path: \"`u` ([117])\", inner: SingleValueLeaf(45) })]",
                     },
                 ),
             },
